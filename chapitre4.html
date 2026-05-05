@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISTQB Chapitre 4 - Examen Blanc</title>
+<style>
+:root {
+  --bg:#eef2f7; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --blue:#2563eb;
+  --blue2:#1d4ed8; --green:#16a34a; --red:#dc2626; --border:#dbe3ef;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg); color:var(--text); }
+.header { background:#1e293b; color:white; padding:18px 24px; box-shadow:0 2px 10px rgba(0,0,0,.18); position:sticky; top:0; z-index:99; }
+.header-inner { max-width:980px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:14px; }
+h1 { margin:0; font-size:24px; }
+.timer { font-size:24px; font-weight:bold; color:#facc15; background:#0f172a; padding:10px 16px; border-radius:10px; min-width:110px; text-align:center; }
+.container { max-width:980px; margin:24px auto; padding:0 18px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 8px 24px rgba(15,23,42,.08); padding:24px; }
+.meta { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+.badge { background:#dbeafe; color:#1e40af; padding:7px 10px; border-radius:999px; font-size:13px; font-weight:bold; }
+.progress-wrap { background:#e5e7eb; height:12px; border-radius:999px; overflow:hidden; margin:14px 0 22px; }
+.progress { height:100%; background:var(--blue); width:0%; transition:.25s; }
+.qtop { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:10px; color:var(--muted); }
+.qtype { font-weight:bold; color:#475569; }
+.question-title { font-size:20px; font-weight:bold; margin:16px 0 20px; line-height:1.45; }
+.option { display:flex; gap:12px; align-items:flex-start; padding:14px; margin:11px 0; border:2px solid #e5e7eb; border-radius:12px; cursor:pointer; background:#f9fafb; transition:.15s; }
+.option:hover { border-color:#93c5fd; background:#eff6ff; }
+.option input { margin-top:2px; transform:scale(1.2); }
+.option.selected { border-color:var(--blue); background:#eff6ff; }
+.nav { display:flex; justify-content:space-between; gap:12px; margin-top:24px; }
+button { border:0; border-radius:10px; padding:13px 18px; font-weight:bold; font-size:15px; cursor:pointer; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.prev { background:#e5e7eb; color:#374151; }
+.next { background:var(--blue); color:white; }
+.next:hover { background:var(--blue2); }
+.submit { background:var(--green); color:white; }
+.grid { display:grid; grid-template-columns:repeat(10,1fr); gap:8px; margin-top:18px; }
+.jump { padding:9px 0; border-radius:8px; background:#e5e7eb; color:#374151; font-size:13px; }
+.jump.current { background:var(--blue); color:white; }
+.jump.answered { background:#bbf7d0; color:#166534; }
+.result { display:none; }
+.score { font-size:48px; font-weight:900; margin:10px 0; }
+.pass { color:var(--green); } .fail { color:var(--red); }
+.review { border-left:5px solid #94a3b8; background:#f8fafc; padding:14px; border-radius:10px; margin:12px 0; }
+.review.ok { border-left-color:var(--green); }
+.review.ko { border-left-color:var(--red); }
+.small { color:var(--muted); font-size:14px; }
+.warning { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:12px; border-radius:12px; margin:12px 0; }
+@media(max-width:700px) {
+  .header-inner { flex-direction:column; align-items:flex-start; }
+  .grid { grid-template-columns:repeat(5,1fr); }
+  .nav { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>ISTQB Fondation v4.0 — Chapitre 4</h1>
+      <div class="small" style="color:#cbd5e1">Mode examen : 40 questions difficiles, cas réels, pièges K3 — 45 min</div>
+    </div>
+    <div class="timer" id="timer">45:00</div>
+  </div>
+</div>
+
+<div class="container">
+  <div id="exam" class="card">
+    <div class="meta">
+      <span class="badge">40 questions</span>
+      <span class="badge">45 minutes</span>
+      <span class="badge">Seuil 65%</span>
+      <span class="badge">Score sur 100%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+    <div class="qtop">
+      <span id="qcount"></span>
+      <span class="qtype" id="qtype"></span>
+    </div>
+    <div class="question-title" id="question"></div>
+    <div id="options"></div>
+    <div class="nav">
+      <button class="prev" id="prevBtn" onclick="prevQuestion()">← Précédent</button>
+      <button class="next" id="nextBtn" onclick="nextQuestion()">Suivant →</button>
+      <button class="submit" id="submitBtn" onclick="submitExam()" style="display:none">Valider l’examen</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div id="result" class="card result"></div>
+</div>
+
+<script>
+const questions = [{"q": "Un champ “âge” accepte les valeurs entières de 18 à 65 inclus. En utilisant les partitions d’équivalence, quelles partitions sont correctes ?", "type": "single", "opts": ["≤18 valide, 19-64 valide, ≥65 valide", "<18 invalide, 18-65 valide, >65 invalide", "18 invalide, 19-65 valide, 66 invalide", "<18 valide, 18-65 invalide, >65 valide"], "ans": [1], "exp": "Les partitions d’équivalence divisent les données en ensembles traités de la même façon : valeurs invalides sous 18, valeurs valides 18 à 65, valeurs invalides au-dessus de 65."}, {"q": "Pour le champ âge 18 à 65 inclus, quelles valeurs couvrent 100% des limites avec l’analyse des valeurs limites à 2 valeurs ?", "type": "multi", "opts": ["65", "17", "66", "18"], "ans": [0, 1, 2, 3], "exp": "En BVA 2 valeurs, pour chaque limite on teste la valeur limite et la voisine la plus proche dans la partition adjacente : 17/18 et 65/66."}, {"q": "Pour le champ âge 18 à 65 inclus, quelles valeurs couvrent 100% des limites avec l’analyse des valeurs limites à 3 valeurs ?", "type": "multi", "opts": ["64", "66", "65", "18", "17", "19"], "ans": [0, 1, 2, 3, 4, 5], "exp": "En BVA 3 valeurs, pour chaque limite on teste la limite et ses deux voisines : 17,18,19 et 64,65,66."}, {"q": "Un champ quantité accepte les entiers de 1 à 10 inclus. Un développeur a codé “quantité == 10” au lieu de “quantité <= 10”. Quelle valeur a le plus de chance de révéler ce défaut si la technique à 2 valeurs utilise seulement 10 et 11 pour la limite haute ?", "type": "single", "opts": ["11", "10", "1", "9"], "ans": [3], "exp": "Le syllabus donne un piège similaire : la technique à 3 valeurs ajoute la voisine interne 9, qui permet de détecter une erreur de type == au lieu de <=."}, {"q": "Quel énoncé distingue correctement boîte noire, boîte blanche et expérience ?", "type": "single", "opts": ["Boîte noire = structure interne ; boîte blanche = spécifications ; expérience = uniquement automatisation", "Boîte noire = comportement spécifié ; boîte blanche = structure interne ; expérience = connaissances du testeur", "Boîte noire = uniquement exploration ; boîte blanche = uniquement exigences ; expérience = code", "Les trois techniques sont équivalentes"], "ans": [1], "exp": "Les techniques boîte noire dérivent des spécifications, boîte blanche de la structure interne, et expérience des connaissances/compétences du testeur."}, {"q": "Pourquoi les cas de test boîte noire peuvent-ils rester utiles si l’implémentation change ?", "type": "single", "opts": ["Parce qu’ils sont toujours exploratoires", "Parce qu’ils dépendent du code source", "Parce qu’ils sont indépendants de l’implémentation tant que le comportement requis reste le même", "Parce qu’ils ne détectent jamais de défauts"], "ans": [2], "exp": "Les tests boîte noire sont basés sur le comportement spécifié, pas sur la structure interne."}, {"q": "Quel élément est un élément de couverture pour les partitions d’équivalence ?", "type": "single", "opts": ["Chaque session exploratoire", "Chaque partition identifiée", "Chaque ligne de code", "Chaque branche"], "ans": [1], "exp": "Dans les partitions d’équivalence, les éléments de couverture sont les partitions."}, {"q": "Un formulaire a deux champs. Pays = {France, Espagne, Italie} et Livraison = {standard, express}. Pour une couverture Each Choice minimale, combien de tests peuvent suffire au minimum ?", "type": "single", "opts": ["3", "6", "5", "2"], "ans": [0], "exp": "Each Choice exige que chaque partition de chaque ensemble soit couverte au moins une fois. Avec 3 pays et 2 livraisons, 3 tests peuvent couvrir les 5 choix, par exemple FR-standard, ES-express, IT-standard."}, {"q": "La couverture des partitions est calculée comment ?", "type": "single", "opts": ["Valeurs limites valides / valeurs limites invalides × 100", "Branches exercées / instructions exécutées × 100", "Cas de test réussis / cas de test exécutés × 100", "Partitions exercées / partitions identifiées × 100"], "ans": [3], "exp": "La couverture des partitions = nombre de partitions exercées par au moins un test / nombre total de partitions identifiées."}, {"q": "Un champ code promo accepte soit vide, soit un code de 8 caractères alphanumériques. Quelle partition est probablement invalide ?", "type": "single", "opts": ["Un code de 8 caractères valide", "8 caractères alphanumériques", "7 caractères alphanumériques", "Vide"], "ans": [2], "exp": "Si seuls vide et 8 caractères alphanumériques sont acceptés, 7 caractères appartient à une partition invalide."}, {"q": "L’analyse des valeurs limites ne peut être utilisée que lorsque les partitions sont :", "type": "single", "opts": ["Toujours infinies", "Toujours booléennes", "Non ordonnées", "Ordonnées"], "ans": [3], "exp": "La BVA repose sur les limites de partitions ordonnées."}, {"q": "Une règle métier : si client VIP et panier ≥100€, livraison gratuite ; sinon livraison payante. Quelle technique boîte noire est la plus adaptée pour couvrir les combinaisons de conditions ?", "type": "single", "opts": ["Checklist uniquement", "Estimation d’erreurs", "Couverture des instructions", "Table de décision"], "ans": [3], "exp": "Les tables de décision testent systématiquement les combinaisons de conditions et les actions associées."}, {"q": "Dans une table de décision à entrée limitée avec 3 conditions booléennes indépendantes, combien de combinaisons complètes existent avant simplification ?", "type": "single", "opts": ["9", "8", "3", "6"], "ans": [1], "exp": "Avec n conditions booléennes, une table complète a 2^n combinaisons. Pour 3 conditions : 8."}, {"q": "Dans une table de décision, que signifie généralement “-” pour une condition ?", "type": "single", "opts": ["La condition est fausse", "La condition est vraie", "La combinaison est irréalisable", "La condition n’est pas pertinente pour cette règle"], "ans": [3], "exp": "Le tiret signifie que la valeur de la condition n’a pas d’impact sur l’action pour cette règle."}, {"q": "Dans une table de décision, que signifie généralement “N/A” ?", "type": "single", "opts": ["Condition irréalisable pour cette règle", "Condition vraie", "Condition fausse", "Action obligatoire"], "ans": [0], "exp": "N/A indique une combinaison ou condition irréalisable pour une règle donnée."}, {"q": "Dans les tests par tables de décisions, quels sont les éléments de couverture ?", "type": "single", "opts": ["Les états visités", "Les lignes d’actions uniquement", "Les variables internes du code", "Les colonnes contenant les combinaisons de conditions réalisables"], "ans": [3], "exp": "Les éléments de couverture des tables de décision sont les colonnes réalisables, c’est-à-dire les règles de décision."}, {"q": "Une table de décision a 10 règles réalisables. Les tests en couvrent 7. Quelle est la couverture ?", "type": "single", "opts": ["30%", "100%", "70%", "7%"], "ans": [2], "exp": "Couverture = 7 / 10 × 100 = 70%."}, {"q": "Quel est un avantage majeur des tables de décision ?", "type": "single", "opts": ["Elles remplacent les tests de régression", "Elles mesurent la couverture du code", "Elles évitent toute explosion combinatoire", "Elles identifient systématiquement des combinaisons de conditions parfois oubliées"], "ans": [3], "exp": "Les tables de décision sont utiles pour logique complexe et règles métier, mais peuvent croître exponentiellement."}, {"q": "Un compte peut être dans les états “créé”, “actif”, “bloqué”, “fermé”. Les événements valides changent l’état selon des règles. Quelle technique est la plus adaptée ?", "type": "single", "opts": ["Test de transition d’état", "Partition d’équivalence uniquement", "Table de décision uniquement", "Couverture des instructions"], "ans": [0], "exp": "Le test de transition d’état convient aux systèmes dont le comportement dépend de l’état courant et d’événements."}, {"q": "Dans une table d’états, les cellules vides représentent généralement :", "type": "single", "opts": ["Des états initiaux", "Des actions obligatoires", "Des transitions non valides", "Des transitions valides sans action"], "ans": [2], "exp": "Contrairement au diagramme, la table d’états montre explicitement les transitions invalides par des cellules vides."}, {"q": "Un diagramme possède 5 états. Les tests visitent 4 états. Quelle est la couverture de tous les états ?", "type": "single", "opts": ["40%", "80%", "100%", "20%"], "ans": [1], "exp": "Couverture des états = 4 / 5 × 100 = 80%."}, {"q": "Un modèle contient 12 transitions valides. Les tests en exercent 9. Quelle est la couverture des transitions valides ?", "type": "single", "opts": ["100%", "25%", "75%", "80%"], "ans": [2], "exp": "Couverture des transitions valides = 9 / 12 × 100 = 75%."}, {"q": "Quelle affirmation sur les couvertures d’état est correcte ?", "type": "single", "opts": ["La couverture de tous les états est plus forte que toutes les transitions", "La couverture complète des transitions valides garantit généralement la couverture complète de tous les états", "La couverture de tous les états garantit toujours la couverture de toutes les transitions valides", "Les transitions invalides ne doivent jamais être testées"], "ans": [1], "exp": "La couverture des transitions valides est plus forte que la couverture des états et garantit généralement tous les états."}, {"q": "Pour la couverture de toutes les transitions, que doit-on faire ?", "type": "single", "opts": ["Exercer les transitions valides et tenter les transitions non valides", "Tester uniquement l’état initial", "Exercer seulement les états finaux", "Tester seulement les transitions invalides dans un seul cas"], "ans": [0], "exp": "La couverture de toutes les transitions inclut les transitions valides et les tentatives de transitions non valides."}, {"q": "Pourquoi tester une seule transition non valide par cas de test est-il recommandé ?", "type": "single", "opts": ["Pour supprimer les états", "Pour rendre le test boîte blanche", "Pour augmenter le nombre de lignes de code", "Pour éviter le masquage de défauts"], "ans": [3], "exp": "Tester plusieurs transitions invalides dans un cas peut masquer un défaut par un autre."}, {"q": "Dans le test des instructions, les éléments de couverture sont :", "type": "single", "opts": ["Les décisions métier", "Les partitions invalides", "Les instructions exécutables", "Les critères d’acceptation"], "ans": [2], "exp": "Le test des instructions vise à exercer les instructions exécutables."}, {"q": "Un programme contient 80 instructions exécutables. Une suite en exécute 60. Quelle est la couverture des instructions ?", "type": "single", "opts": ["80%", "60%", "75%", "70%"], "ans": [2], "exp": "60 / 80 × 100 = 75%."}, {"q": "Que signifie une couverture des instructions de 100% ?", "type": "single", "opts": ["Toutes les branches ont forcément été testées", "Toutes les instructions exécutables ont été exécutées au moins une fois", "Tous les chemins possibles ont été couverts", "Tous les défauts ont été détectés"], "ans": [1], "exp": "100% instructions signifie exécution de chaque instruction au moins une fois, mais pas détection garantie ni couverture des branches."}, {"q": "Pourquoi 100% de couverture des instructions ne garantit pas 100% de couverture des branches ?", "type": "single", "opts": ["Parce que les branches ne font pas partie du code", "Parce que les instructions sont toujours plus fortes que les branches", "Parce qu’une décision peut avoir une branche non exercée même si toutes les instructions visibles ont été exécutées", "Parce que les tests boîte blanche ne mesurent rien"], "ans": [2], "exp": "Une suite peut exécuter toutes les instructions mais ne pas couvrir tous les résultats possibles des décisions."}, {"q": "Dans le test des branches, les éléments de couverture sont :", "type": "single", "opts": ["Les partitions d’équivalence", "Les branches du graphe de contrôle", "Les exigences fonctionnelles", "Les User Stories"], "ans": [1], "exp": "Le test des branches vise à exercer les transferts de contrôle dans le graphe de flux."}, {"q": "Une fonction contient 20 branches. Les tests en exercent 15. Quelle est la couverture des branches ?", "type": "single", "opts": ["75%", "80%", "15%", "50%"], "ans": [0], "exp": "15 / 20 × 100 = 75%."}, {"q": "Quelle affirmation est correcte ?", "type": "single", "opts": ["Les deux mesures sont identiques", "100% couverture des branches implique 100% couverture des instructions", "100% couverture des instructions implique toujours 100% couverture des branches", "La couverture des branches ne concerne que les tests boîte noire"], "ans": [1], "exp": "La couverture des branches englobe la couverture des instructions, mais pas l’inverse."}, {"q": "Quelle valeur principale apportent les tests boîte blanche ?", "type": "single", "opts": ["Ils prennent en compte l’implémentation entière et mesurent objectivement une couverture structurelle", "Ils détectent toujours les exigences manquantes", "Ils ne nécessitent aucune conception ou implémentation", "Ils remplacent toutes les techniques boîte noire"], "ans": [0], "exp": "Les tests boîte blanche analysent la structure interne et fournissent des mesures objectives de couverture."}, {"q": "Quelle faiblesse des tests boîte blanche est correcte ?", "type": "single", "opts": ["Ils ne couvrent aucune instruction", "Ils ne peuvent pas être utilisés sur du pseudocode", "Ils ne peuvent jamais être automatisés", "Ils peuvent ne pas détecter une exigence non implémentée"], "ans": [3], "exp": "Si une exigence est totalement omise, la structure existante peut ne pas révéler cette omission."}, {"q": "L’estimation d’erreurs repose principalement sur :", "type": "single", "opts": ["L’expérience du testeur et la connaissance des erreurs/défauts fréquents", "La couverture des branches uniquement", "La génération automatique de tous les chemins", "Les règles strictes d’une table de décision"], "ans": [0], "exp": "L’estimation d’erreurs anticipe erreurs, défauts et défaillances probables à partir de l’expérience."}, {"q": "Quel exemple illustre une attaque de faute ?", "type": "single", "opts": ["Utiliser une liste d’erreurs typiques comme paramètres manquants, types incompatibles, divisions par zéro, puis concevoir des tests ciblés", "Exécuter tous les tests dans l’ordre alphabétique", "Créer une User Story", "Tester uniquement les valeurs nominales"], "ans": [0], "exp": "Une attaque de faute consiste à utiliser une liste de défauts/défaillances possibles pour concevoir des tests."}, {"q": "Dans le test exploratoire, les tests sont :", "type": "single", "opts": ["Toujours impossibles à documenter", "Toujours dérivés exclusivement du code source", "Tous écrits en détail avant l’exécution", "Conçus, exécutés et évalués simultanément pendant l’apprentissage de l’objet de test"], "ans": [3], "exp": "Le test exploratoire combine apprentissage, conception, exécution et évaluation en continu."}, {"q": "Quand le test exploratoire est-il particulièrement utile ?", "type": "multi", "opts": ["Quand aucun testeur expérimenté n’est disponible et que le domaine est inconnu", "Complément à des techniques plus formelles", "Spécifications pauvres ou inadéquates", "Forte pression du temps"], "ans": [1, 2, 3], "exp": "Il est utile avec peu de spécifications, sous pression, et comme complément. Il est plus efficace avec un testeur expérimenté."}, {"q": "Dans le test exploratoire basé sur des sessions, quel artefact guide généralement la session ?", "type": "single", "opts": ["Un rapport de clôture", "Un graphe de flux de contrôle", "Une table de décision complète uniquement", "Une charte de test"], "ans": [3], "exp": "Une charte de test contient les objectifs de test et guide la session exploratoire."}, {"q": "Dans le test basé sur des checklists, quels éléments devraient idéalement figurer dans une checklist ?", "type": "single", "opts": ["Des points trop généraux comme “tester tout”", "Des éléments vérifiables séparément et directement", "Des éléments impossibles à vérifier", "Des critères de sortie uniquement"], "ans": [1], "exp": "Les items de checklist doivent être vérifiables séparément et directement, souvent formulés en questions."}, {"q": "Pourquoi une checklist doit-elle être régulièrement mise à jour ?", "type": "single", "opts": ["Parce qu’elle doit devenir aussi longue que possible", "Parce que certains items deviennent moins efficaces et de nouveaux défauts sévères doivent être pris en compte", "Parce qu’elle doit contenir les tests automatisables", "Parce qu’elle remplace toujours les cas de test"], "ans": [1], "exp": "Les checklists doivent évoluer avec l’analyse des défauts, sans devenir trop longues."}, {"q": "Quels sont les 3 C d’une User Story ?", "type": "single", "opts": ["Carte, Conversation, Confirmation", "Code, Couverture, Critère", "Condition, Cas, Couverture", "Client, Contrat, Correction"], "ans": [0], "exp": "Les 3 C sont Carte, Conversation et Confirmation."}, {"q": "Quel format de User Story est le plus courant ?", "type": "single", "opts": ["Instruction/Branche/Chemin", "Given/When/Then obligatoire pour toute User Story", "En tant que [rôle], je veux [objectif], afin de [valeur métier]", "Si [condition], alors [action] uniquement"], "ans": [2], "exp": "Le format courant exprime rôle, objectif et valeur métier."}, {"q": "Que signifie INVEST pour une bonne User Story ?", "type": "single", "opts": ["Initiale, Nécessaire, Visible, Exacte, Stable, Technique", "Intégrée, Normée, Vérifiée, Exécutée, Sécurisée, Traçable", "Indépendante, Négociable, Valeur, Estimable, Petite, Testable", "Indépendante, Non testable, Vague, Énorme, Spécifique, Temporaire"], "ans": [2], "exp": "INVEST = Independent, Negotiable, Valuable, Estimable, Small, Testable."}, {"q": "Quel est le rôle des critères d’acceptation ?", "type": "single", "opts": ["Remplacer le code de production", "Définir les conditions qu’une User Story doit satisfaire pour être acceptée", "Mesurer la couverture des branches", "Lister uniquement les défauts trouvés"], "ans": [1], "exp": "Les critères d’acceptation décrivent les conditions à vérifier pour accepter l’implémentation."}, {"q": "Quels formats sont courants pour rédiger des critères d’acceptation ?", "type": "multi", "opts": ["Format personnalisé clair et non ambigu", "Orienté scénario, par exemple Given/When/Then", "Orienté règles, par exemple liste ou tableau entrée-sortie", "Uniquement code source compilable"], "ans": [0, 1, 2], "exp": "Les critères peuvent être scénarios, règles ou un format personnalisé s’ils sont bien définis."}, {"q": "Dans ATDD, quand les cas de test sont-ils créés ?", "type": "single", "opts": ["Avant l’implémentation de la User Story", "Uniquement quand tous les défauts sont corrigés", "Après suppression des critères d’acceptation", "Après la mise en production uniquement"], "ans": [0], "exp": "En ATDD, les tests d’acceptation sont créés avant l’implémentation."}, {"q": "Dans ATDD, qui participe idéalement à la création des cas de test ?", "type": "single", "opts": ["Uniquement l’exploitation", "Uniquement les développeurs", "Uniquement les testeurs indépendants", "Clients/représentants métier, développeurs et testeurs"], "ans": [3], "exp": "ATDD est collaboratif et combine perspectives métier, développement et test."}, {"q": "En ATDD, quel ordre est généralement recommandé pour les cas de test ?", "type": "single", "opts": ["Commencer uniquement par performance extrême", "Écrire seulement les cas négatifs", "Commencer par des cas positifs, puis ajouter des cas négatifs et des caractéristiques non fonctionnelles", "Écrire des cas qui vont au-delà de la User Story"], "ans": [2], "exp": "On commence souvent par confirmer le comportement nominal, puis erreurs/exceptions et aspects non fonctionnels."}, {"q": "Quel énoncé sur les cas de test ATDD est correct ?", "type": "single", "opts": ["Ils doivent être écrits seulement après le code", "Ils doivent être incompréhensibles pour les parties prenantes", "Ils doivent toujours décrire la même caractéristique plusieurs fois", "Ils doivent couvrir toutes les caractéristiques de la User Story sans aller au-delà"], "ans": [3], "exp": "Les cas ATDD doivent être compréhensibles, couvrir la story, et éviter les doublons."}];
+let current = 0;
+let answers = Array.from({length: questions.length}, () => []);
+let remaining = 45 * 60;
+let submitted = false;
+
+function sameArray(a,b) {
+  a = [...a].sort((x,y)=>x-y); b = [...b].sort((x,y)=>x-y);
+  return a.length === b.length && a.every((v,i)=>v===b[i]);
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  document.getElementById('qcount').textContent = `Question ${current+1} / ${questions.length}`;
+  document.getElementById('qtype').textContent = q.type === 'multi' ? 'Plusieurs réponses possibles' : 'Une seule réponse';
+  document.getElementById('question').textContent = q.q;
+  document.getElementById('progress').style.width = `${((current+1)/questions.length)*100}%`;
+  const options = document.getElementById('options');
+  options.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const selected = answers[current].includes(i);
+    const label = document.createElement('label');
+    label.className = 'option' + (selected ? ' selected' : '');
+    const type = q.type === 'multi' ? 'checkbox' : 'radio';
+    label.innerHTML = `<input type="${type}" name="q" value="${i}" ${selected?'checked':''}> <span><b>${String.fromCharCode(65+i)}.</b> ${opt}</span>`;
+    label.onclick = () => selectAnswer(i);
+    options.appendChild(label);
+  });
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').style.display = current === questions.length - 1 ? 'none' : 'inline-block';
+  document.getElementById('submitBtn').style.display = current === questions.length - 1 ? 'inline-block' : 'none';
+  renderGrid();
+}
+
+function selectAnswer(i) {
+  const q = questions[current];
+  if (q.type === 'single') answers[current] = [i];
+  else {
+    if (answers[current].includes(i)) answers[current] = answers[current].filter(x => x !== i);
+    else answers[current].push(i);
+  }
+  renderQuestion();
+}
+
+function nextQuestion() { if (current < questions.length - 1) { current++; renderQuestion(); } }
+function prevQuestion() { if (current > 0) { current--; renderQuestion(); } }
+function goTo(i) { current = i; renderQuestion(); }
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  questions.forEach((_, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'jump' + (i === current ? ' current' : '') + (answers[i].length ? ' answered' : '');
+    btn.textContent = i + 1;
+    btn.onclick = () => goTo(i);
+    grid.appendChild(btn);
+  });
+}
+
+function tick() {
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  document.getElementById('timer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if (remaining <= 0) submitExam();
+  remaining--;
+}
+
+function submitExam() {
+  if (submitted) return;
+  submitted = true;
+  clearInterval(clock);
+  let score = 0, answered = 0, review = '';
+  questions.forEach((q, i) => {
+    const ok = sameArray(answers[i], q.ans);
+    if (answers[i].length) answered++;
+    if (ok) score++;
+    const your = answers[i].length ? answers[i].sort((a,b)=>a-b).map(n => `${String.fromCharCode(65+n)}. ${q.opts[n]}`).join('<br>') : '<i>Aucune réponse</i>';
+    const good = q.ans.sort((a,b)=>a-b).map(n => `${String.fromCharCode(65+n)}. ${q.opts[n]}`).join('<br>');
+    review += `<div class="review ${ok?'ok':'ko'}">
+      <b>Q${i+1} — ${ok?'✅ Correct':'❌ Incorrect'}</b><br>
+      <span class="small">Ta réponse :</span><br>${your}<br>
+      <span class="small">Bonne réponse :</span><br>${good}<br>
+      <span class="small">Explication :</span> ${q.exp}
+    </div>`;
+  });
+  const percent = Math.round((score / questions.length) * 100);
+  const passed = percent >= 65;
+  document.getElementById('exam').style.display = 'none';
+  const result = document.getElementById('result');
+  result.style.display = 'block';
+  result.innerHTML = `
+    <h2>Résultat final</h2>
+    <div class="score ${passed?'pass':'fail'}">${percent}%</div>
+    <h3>${passed?'✅ Réussi':'❌ Échec'} — ${score} / 40</h3>
+    <p>Questions répondues : ${answered} / 40. Seuil de réussite : 65%.</p>
+    ${answered < 40 ? '<div class="warning">Attention : certaines questions n’ont pas été répondues.</div>' : ''}
+    <button class="next" onclick="location.reload()">Recommencer</button>
+    <h3>Correction détaillée</h3>
+    ${review}
+  `;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+renderQuestion();
+tick();
+const clock = setInterval(tick, 1000);
+</script>
+</body>
+</html>
